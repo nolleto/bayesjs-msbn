@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",//commonjs
+        "noImplicitAny": true,
+        "removeComments": false,
+        "preserveConstEnums": true,
+        //"outFile": "../../built/local/tsc.js",
+        "sourceMap": true,
+        "outDir": "./dist/",
+        "target": "es2017",
+        "experimentalDecorators": true,
+        "declaration": true
+    },
+    "include": [
+        "src/**/*",
+        "test/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "**/*.spec.ts"
+    ]
+}
+

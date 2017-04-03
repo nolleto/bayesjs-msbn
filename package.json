@@ -1,0 +1,39 @@
+{
+  "name": "bayesjs-msbn",
+  "version": "1.0.0",
+  "description": "Biblioteca de inferencia para redes MSBN",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "webpack --config webpack.config.js",
+    "build": "webpack -p",
+    "watch": "webpack -w",
+    "dev-test-watch": "mocha-typescript-watch",
+    "test": "tsc -p . && mocha -r ts-node/register test/**/*.ts",
+    "prepublish": "tsc -p ."
+  },
+  "keywords": [
+    "bayes",
+    "bayesian",
+    "network",
+    "inference",
+    "bn",
+    "msbn"
+  ],
+  "author": "nolleto",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/chai": "^3.4.35",
+    "@types/expect": "^1.20.1",
+    "@types/mocha": "^2.2.40",
+    "@types/node": "^7.0.12",
+    "chai": "^3.5.0",
+    "mocha": "^3.2.0",
+    "mocha-typescript": "^1.0.23",
+    "ts-loader": "^2.0.3",
+    "ts-node": "^3.0.2",
+    "typescript": "^2.2.2",
+    "typings": "^2.1.0",
+    "webpack": "^2.3.2"
+  }
+}
