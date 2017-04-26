@@ -1,9 +1,9 @@
 import { ParsedPath } from 'path';
 import { expect } from 'chai';
-import { INetwork, INode, ILinkage } from "../src/interfaces/index";
+import {  ILinkage } from "../src/interfaces/index";
 import { netD1, netD2, netD3 } from "../models/nets";
-import { mergeNetworks, separateNodes, createLinksNodes, findParents, hasCycles, topologicalSort, msbn } from "../src/index";
-import * as Merge from "../src/merge";
+// import { mergeNetworks, separateNodes, createLinksNodes, findParents, hasCycles, topologicalSort, msbn } from "../src/index";
+import { INetwork, ILinkageItem ,INode, mergeNetworks } from "../src/merge";
 
 const createLink = (nodeId: string) => (net1: string, net2: string) => ([
   { networkId: net1, nodeId: nodeId }, 
@@ -141,19 +141,93 @@ const getLinkages = () => {
 //   });
 // });
 describe('MSBN', () => {
-  it('Old', () => {
-    let nets = [netD1, netD2, netD3];
-    let linkages = getLinkages();
-    let merge = mergeNetworks(nets, linkages);
+  // it('Old', () => {
+  //   let nets = [netD1, netD2, netD3];
+  //   let linkages = getLinkages();
+  //   let merge = mergeNetworks(nets, linkages);
 
     
-  });
+  // });
 
   it('New', () => {
+    let net1: INetwork = {
+      id: '1',
+      name: 'net 1',
+      nodes: {
+        'RAIN': rain,
+        'SPRINKLER': sprinkler,
+        'GRASS_WET': grassWet,
+      }
+    };
+    let net2: INetwork = {
+      id: '2',
+      name: 'net 2',
+      nodes: {
+        'GRASS_WET': grassWet2,
+        'TEST': test,
+      }
+    };
     
-    let nets = [netD1, netD2, netD3];
-    let linkages = getLinkages();
-    let merge = Merge.mergeNetworks(nets, linkages);
+    let nets = [net1, net2];
+    let linkages: [ILinkageItem, ILinkageItem][] = [
+      [
+        {
+          networkId: '1',
+          nodeId: 'GRASS_WET',
+        },
+        {
+          networkId: '2',
+          nodeId: 'GRASS_WET',
+        }
+      ]
+    ];
+    let merge = mergeNetworks(nets, linkages);
     
   })
 });
+
+export const rain = {
+  id: 'RAIN',
+  states: [ 'T', 'F' ],
+  parents: [],
+  cpt: { 'T': 0.2, 'F': 0.8 }
+} as INode;
+
+export const sprinkler = {
+  id: 'SPRINKLER',
+  states: [ 'T', 'F' ],
+  parents: [ 'RAIN' ],
+  cpt: [
+    { when: { 'RAIN': 'T' }, then: { 'T': 0.01, 'F': 0.99 } },
+    { when: { 'RAIN': 'F' }, then: { 'T': 0.4, 'F': 0.6 } }
+  ]
+};
+
+export const grassWet = {
+  id: 'GRASS_WET',
+  states: [ 'T', 'F' ],
+  parents: [ 'RAIN', 'SPRINKLER' ],
+  cpt: [
+    { when: { 'RAIN': 'T', 'SPRINKLER': 'T' }, then: { 'T': 0.99, 'F': 0.01 } },
+    { when: { 'RAIN': 'T', 'SPRINKLER': 'F' }, then: { 'T': 0.8, 'F': 0.2 } },
+    { when: { 'RAIN': 'F', 'SPRINKLER': 'T' }, then: { 'T': 0.9, 'F': 0.1 } },
+    { when: { 'RAIN': 'F', 'SPRINKLER': 'F' }, then: { 'T': 0, 'F': 1 } }
+  ]
+};
+
+export const grassWet2 = {
+  id: 'GRASS_WET',
+  states: [ 'T', 'F' ],
+  parents: [],
+  cpt: { 'T': 0.5, 'F': 0.5 }
+} as INode;
+
+export const test = {
+  id: 'TEST',
+  states: [ 'T', 'F' ],
+  parents: ['GRASS_WET'],
+  cpt: [
+    { when: { 'GRASS_WET': 'T' }, then: { 'T': 0.01, 'F': 0.99 } },
+    { when: { 'GRASS_WET': 'F' }, then: { 'T': 0.4, 'F': 0.6 } }
+  ]
+};
