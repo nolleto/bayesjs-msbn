@@ -1,250 +1,186 @@
-import { Node } from './models/node';
-import { INetwork } from "./interfaces/network";
-import { IGraph } from "./interfaces/graph";
-import { INode } from "./interfaces/node";
 
-import { Graph } from "./models/graph";
-import { Edge } from "./models/edge";
 
-/*
-1. consistency; 
-2. Moralization; Check
-3. Triangulation; 
-*/
-export class JunctionTree {
-    /**
-     * Morilize a network. Basicaly get a node by node and add a edge between all parents node;
-     * @param net Target network
-     */
-    static moralize(net: INetwork): IGraph {
-        let graph = new Graph();
-        let nodesDict: { [id: string]: INode } = {};
+export const buildTriangulatedGraph = (moralGraph: IMoralGraph) => {
+  const triangulatedGraph = moralGraph.clone();
+  const clonedGraph = triangulatedGraph.clone();
 
-        for (let i in net.nodes) {
-            let node = net.nodes[i];
+  const nodesToRemove = clonedGraph.getNodes()
+    .map(node => {
+      return {
+        node,
+        neighbors: clonedGraph.getNeighborsOf(node)
+      };
+    })
+    .sort((a, b) => {
+      return a.neighbors.length - b.neighbors.length;
+    });
 
-            nodesDict[node.id] = node;
+  while (nodesToRemove.length > 0) {
+    const nodeToRemove = nodesToRemove.shift();
+
+    for (let i = 0; i < nodeToRemove.neighbors.length; i++) {
+      for (let j = i + 1; j < nodeToRemove.neighbors.length; j++) {
+        const neighborA = nodeToRemove.neighbors[i];
+        const neighborB = nodeToRemove.neighbors[j];
+
+        if (!clonedGraph.containsNode(neighborA) || !clonedGraph.containsNode(neighborB)) {
+          continue;
         }
 
-        for (let i in net.nodes) {
-            let node = net.nodes[i];
-            let parents: INode[] = [];
-
-            graph.nodes.push(node);
-
-            for (let j in node.parents) {
-                let parentId = node.parents[j];
-                let parent = nodesDict[parentId];
-
-                if (!graph.hasEdge(node, parent)) {
-                    let edge = new Edge(node, parent);
-
-                    graph.edges.push(edge);
-                }
-                parents.push(parent);
-            }
-            this.ligarNodos(graph, parents);
+        if (!clonedGraph.areConnected(neighborA, neighborB)) {
+          clonedGraph.addEdge(neighborA, neighborB);
+          triangulatedGraph.addEdge(neighborA, neighborB);
         }
-
-        return graph;
+      }
     }
 
-    /**
-     * Triangulation graph by elimination. Basicaly get a node, take off by
-     * the graph, connect the edges/neighbors noc connecteds, add the node 
-     * on de blacklist, get the next node.
-     * Blacklist nodes not considering.
-     * @param graph Target graph
-     */
-    static triangulation(graph: IGraph): IGraph {
-        let nGraph = Graph.get({ ...graph });
-        let bestNode = this.triangulateBestNode(nGraph);
-        let checkeds: string[] = [];
+    clonedGraph.removeNode(nodeToRemove.node);
+  }
 
-        this.triangulate(nGraph, bestNode, checkeds);
+  return triangulatedGraph;
+};
 
-        // Repeat while there exists a cycle of length > 3 with no chord:
-        // Add a chord (edge between two non-adjacent
-        // vertices in such a cycle).
-
-        return nGraph;
-    }
-
-    /**
-     * Triangulate node. Add edge between neighbors not conecteds
-     * @param graph Target graph
-     * @param node Target node
-     * @param checkeds Nodes triangulateds. Blacklist
-     */
-    static triangulate(graph: Graph, node: INode, checkeds: string[] = []) {
-        let neighbors = graph.getEdgesList(node)
-            .filter(n => !checkeds.includes(n.id));
-
-        this.ligarNodos(graph, neighbors);
-        checkeds.push(node.id);
-
-        // console.log(node.id, neighbors.map(Node.getId));
-
-        if (checkeds.length < graph.nodes.length) {
-            let next = this.triangulateBestNode(graph, checkeds);
-
-            this.triangulate(graph, next, checkeds);
-        }
-    }
-
-    /**
-     * Search for the node with minimum of edges. 
-     * @param graph Target graph
-     * @param checkeds Nodes triangulateds. Blacklist
-     */
-    static triangulateBestNode(graph: Graph, checkeds: string[] = []): INode {
-        const nodes = graph.nodes.filter(n => {
-            return !checkeds.includes(n.id);
-        });
-
-        let getEdges = (node: INode) => {
-            return graph.getEdgesList(node)
-                .map(n => n.id)
-                .filter(id => !checkeds.includes(id));
-        };
-
-        let best = nodes[0];
-        let bestEdges = getEdges(best);
-
-        for (let i = 1; i < nodes.length; i++) {
-            let n = nodes[i];
-            let edges = getEdges(n);
-
-            if (edges.length < bestEdges.length) {
-                best = n;
-                bestEdges = getEdges(best);
-            }
-        }
-
-        return best;
-    }
-
-    /**
-     * connect all nodes.
-     * @param graph Target graph.
-     * @param nodes Nodes that you wannt to connect.
-     */
-    static ligarNodos(graph: Graph, nodes: INode[]) {
-        if (nodes.length <= 1) return;
-        for (let i = 0; i < nodes.length; i++) {
-            let node1 = nodes[i];
-
-            for (var j = i + 1; j < nodes.length; j++) {
-                var node2 = nodes[j];
-
-                if (!graph.hasEdge(node1, node2)) {
-                    let edge = new Edge(node1, node2);
-
-                    graph.edges.push(edge);
-                }
-            }
-        }
-    }
+export interface IMoralGraph {
+  addNode: (node: string) => void,
+  removeNode: (node: string) => void,
+  getNodes: () => string[],
+  containsNode: (node: string) => boolean,
+  addEdge: (nodeA: string, nodeB: string) => void,
+  removeEdge: (nodeA: string, nodeB: string) => void,
+  getEdges: () => [string, string][],
+  areConnected: (nodeA: string, nodeB: string) => boolean,
+  getNeighborsOf: (node: string) => string[],
+  clone: () => IMoralGraph,
+  print: () => void
 }
 
-// Methodos de teste
-// export namespace Teste {
-//     export interface Point {
-//         x: number;
-//         y: number;
-//     }
+export const buildMoralGraph = (network: { [id: string]: { id: string, parents: string[] } }): IMoralGraph => {
+  const nodes = Object.keys(network).map(id => network[id]);
+  const moralGraph = createGraph();
 
-//     export class Teste {
-//         min(x: number, y: number) {
-//             return (x <= y) ? x : y
-//         }
+  for (const node of nodes) {
+    moralGraph.addNode(node.id);
 
-//         dist(p1: Point, p2: Point) {
-//             return Math.sqrt(
-//                 (p1.x - p2.x) + (p1.x - p2.x) * 
-//                 (p1.y - p2.y) * (p1.y - p2.y));
-//         }
+    for (const parentId of node.parents) {
+      moralGraph.addEdge(parentId, node.id);
+    }
+  }
 
-//         cost(points: Point[], i: number, j: number, k: number) {
-//             const p1 = points[i];
-//             const p2 = points[j];
-//             const p3 = points[k];
+  for (const node of nodes) {
+    for (let i = 0; i < node.parents.length; i++) {
+      for (let j = i + 1; j < node.parents.length; j++) {
+        if (!moralGraph.areConnected(node.parents[i], node.parents[j])) {
+          moralGraph.addEdge(node.parents[i], node.parents[j]);
+        }
+      }
+    }
+  }
 
-//             return this.dist(p1, p2) + this.dist(p2, p3) + this.dist(p3, p1);
-//         }
+  return moralGraph;
+};
 
-//         mTC(points: Point[], i: number, j: number): number {
-//             // There must be at least three points between i and j
-//             // (including i and j)
-//             if (j < i + 2) return 0;
+const createGraph = (): IMoralGraph => {
+  const nodes: string[] = [];
+  const edges: [string, string][] = [];
 
-//             // Initialize result as infinite
-//             let res = Infinity;
+  const addNode = (nodeId: string) => {
+    nodes.push(nodeId);
+  };
 
-//             // Find minimum triangulation by considering all
-//             for (let k = i + 1; k < j; k++)
-//                 res = this.min(
-//                     res,
-//                     (
-//                         this.mTC(points, i, k) +
-//                         this.mTC(points, k, j) +
-//                         this.cost(points, i, k, j)
-//                     )
-//                 );
-//             return res;
-//         }
+  const removeNode = (node: string) => {
+    for (let i = edges.length - 1; i >= 0; i--) {
+      if (edges[i][0] === node || edges[i][1] === node) {
+        edges.splice(i, 1);
+      }
+    }
 
-//         mTC2(points: Point[], i: number, j: number): number {
-//             // There must be at least three points between i and j
-//             // (including i and j)
-//             if (j < i + 2) return 0;
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      if (nodes[i] === node) {
+        nodes.splice(i, 1);
+        break;
+      }
+    }
+  };
 
-//             // Initialize result as infinite
-//             let res = Infinity;
+  const getNodes = () => {
+    return nodes;
+  };
 
-//             // Find minimum triangulation by considering all
-//             for (let k = i + 1; k < j; k++)
-//                 res = this.min(
-//                     res,
-//                     (
-//                         this.mTC(points, i, k) +
-//                         this.mTC(points, k, j) +
-//                         this.cost(points, i, k, j)
-//                     )
-//                 );
-//             return res;
-//         }
+  const containsNode = (node: string) => {
+    return nodes.some(x => x === node);
+  };
 
-//         mwt(graph: IGraph) {
+  const addEdge = (nodeA: string, nodeB: string) => {
+    edges.push([ nodeA, nodeB ]);
+  };
 
-//         }
+  const removeEdge = (nodeA: string, nodeB: string) => {
+    for (let i = edges.length - 1; i >= 0; i--) {
+      const shouldRemove =
+        (edges[i][0] === nodeA && edges[i][1] === nodeB) ||
+        (edges[i][0] === nodeB && edges[i][1] === nodeA);
 
-//         /**
-//          * Pego do UnBBayes
-//          * @param graph 
-//          * @param node 
-//          */
-//         isNeedingMoreArc(graph: Graph, node: INode): boolean {
-//             var edges = graph.getEdgesList(node);
-//             if (edges.length < 2) return false;
+      if (shouldRemove) {
+        edges.splice(i, 1);
+      }
+    }
+  };
 
-//             for (let i = edges.length-1; i > 0; i--) {
-//                 let auxNo1 = edges[i];
-        
-//                 for (let j = i - 1; j >=0; j--) {
-//                     let auxNo2 = edges[j];
-//                     let auxNo2Edges = graph.getEdgesList(auxNo2)
-                    
-//                     if (!auxNo2Edges.map(Node.getId).includes(auxNo1.id)) {
-//                         return true;
-//                     }
-//                 }
-//             }
-//             return false;
-//         }
+  const getEdges = () => {
+    return edges;
+  }
 
-//     }
-// }
+  const areConnected = (nodeA: string, nodeB: string) => {
+    return edges.some(edge => {
+      return (edge[0] === nodeA && edge[1] === nodeB) ||
+             (edge[0] === nodeB && edge[1] === nodeA);
+    });
+  };
 
+  const getNeighborsOf = (node: string) => {
+    const neighbors = [];
 
+    for (const edge of edges) {
+      if (edge[0] === node) {
+        neighbors.push(edge[1]);
+      } else if (edge[1] === node) {
+        neighbors.push(edge[0]);
+      }
+    }
 
+    return neighbors;
+  };
+
+  const clone = () => {
+    const clonedGraph = createGraph();
+
+    for (const node of nodes) {
+      clonedGraph.addNode(node);
+    }
+
+    for (const edge of edges) {
+      clonedGraph.addEdge(edge[0], edge[1]);
+    }
+
+    return clonedGraph;
+  };
+
+  return {
+    addNode,
+    removeNode,
+    getNodes,
+    containsNode,
+    addEdge,
+    removeEdge,
+    getEdges,
+    areConnected,
+    getNeighborsOf,
+    clone,
+    print: () => {
+      console.log('nodes');
+      console.dir(nodes);
+      console.log('edges');
+      console.dir(edges);
+    }
+  };
+};

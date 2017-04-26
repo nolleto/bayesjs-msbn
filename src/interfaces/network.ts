@@ -1,5 +1,7 @@
 import { INode } from "./node";
 
 export interface INetwork {
-    nodes: INode[]
+    name: string,
+    id: string,
+    nodes: { [id: string]: INode }
 }

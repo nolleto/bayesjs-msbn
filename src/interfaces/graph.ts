@@ -1,7 +1,5 @@
-import { INode } from "./node";
-import { IEdge } from "./edge";
+import { IEdge, IVertex } from "./index";
 
 export interface IGraph {
-    nodes: INode[],
-    edges: IEdge[]
+    vertices: IVertex[]
 }
